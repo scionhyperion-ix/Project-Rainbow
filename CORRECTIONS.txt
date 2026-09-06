@@ -1,0 +1,44 @@
+PROJECT RAINBOW CORRECTIONS
+===========================
+
+This ZIP is an overlay for the current Project Rainbow repository.
+
+Replace/add the files in this ZIP at their matching paths.
+
+IMPORTANT: delete these old duplicate/dead files after applying the overlay:
+
+1. lib/pages/front_switcher_sheet.dart
+   The actual Home and Members code imports lib/sheets/front_switcher_sheet.dart.
+   Keeping both caused the "I edited the search version but Flutter still shows
+   the old one" problem.
+
+2. lib/theme/app_theme.dart
+   The app uses lib/theme/rainbow_theme.dart. app_theme.dart is an old starter
+   theme and is no longer needed.
+
+Optional cleanup:
+3. lib/widgets/quick_action_tile.dart
+   Current Home uses its own _ActionCard. Delete this only if VS Code confirms
+   nothing imports it.
+
+WHAT THIS FIXES
+---------------
+
+- Search bar is now in lib/sheets/front_switcher_sheet.dart, the file Home
+  actually imports.
+- The front switcher no longer contains a "clear current front" list row.
+- Clearing front remains on the Home Quick Front area.
+- Members search no longer changes the current front.
+- A dedicated member_search_sheet.dart opens member profiles instead.
+- Home -> Members -> See all now switches to the Members tab.
+- Widget test now expects the current Home UI instead of the old "Your space".
+- Large member lists use ListView.builder/itemExtent in search sheets.
+
+NOT CHANGED YET
+---------------
+
+- Android namespace/applicationId is still the old starter identifier.
+  Choose a permanent reverse-domain ID before release, then change it safely
+  together with the Android package path.
+- AppStore still supports one current front. Co-fronting should be designed
+  before the persistent database schema is finalized.

@@ -2,44 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/member.dart';
-import 'member_avatar.dart';
 
 class QuickFrontStrip extends StatelessWidget {
   const QuickFrontStrip({
     super.key,
     required this.members,
-    required this.frontingMemberId,
+    required this.frontingMemberIds,
     required this.onOpenMember,
-    required this.onFrontChanged,
+    required this.onQuickFront,
   });
 
   final List<Member> members;
-  final String? frontingMemberId;
+  final Set<String> frontingMemberIds;
+
   final ValueChanged<Member> onOpenMember;
-  final ValueChanged<String?> onFrontChanged;
-
-  List<Member> get _orderedMembers {
-    final result = [...members];
-
-    result.sort((a, b) {
-      if (a.id == frontingMemberId && b.id != frontingMemberId) return -1;
-      if (b.id == frontingMemberId && a.id != frontingMemberId) return 1;
-      return 0;
-    });
-    return result.take(12).toList();
-  }
+  final ValueChanged<Member> onQuickFront;
 
   @override
   Widget build(BuildContext context) {
-    final visible = _orderedMembers;
-
-    if (visible.isEmpty) {
+    if (members.isEmpty) {
       return SizedBox(
-        height: 94,
+        height: 100,
         child: Center(
           child: Text(
-            'Add a member to use quick front.',
-            style: Theme.of(context).textTheme.bodyMedium,
+            'Fronting history will build your frequent list.',
+            style:
+                Theme.of(context).textTheme.bodyMedium,
           ),
         ),
       );
@@ -47,32 +35,28 @@ class QuickFrontStrip extends StatelessWidget {
 
     return SizedBox(
       height: 102,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final slotWidth = (constraints.maxWidth / 4.6).clamp(72.0, 88.0);
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics:
+            const BouncingScrollPhysics(),
+        itemCount: members.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final member = members[index];
 
-          return ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: visible.length,
-            itemBuilder: (context, index) {
-              final member = visible[index];
-
-              return SizedBox(
-                width: slotWidth,
-                child: _QuickFrontTile(
-                  member: member,
-                  isFronting: member.id == frontingMemberId,
-                  onTap: () => onOpenMember(member),
-                  onHoldComplete: () {
-                    if (member.id == frontingMemberId) {
-                      onFrontChanged(null);
-                    } else {
-                      onFrontChanged(member.id);
-                    }
-                  },
-                ),
-              );
+          return _QuickFrontTile(
+            member: member,
+            isFronting:
+                frontingMemberIds.contains(
+              member.id,
+            ),
+            onTap: () {
+              onOpenMember(member);
+            },
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              onQuickFront(member);
             },
           );
         },
@@ -81,194 +65,113 @@ class QuickFrontStrip extends StatelessWidget {
   }
 }
 
-class _QuickFrontTile extends StatefulWidget {
+class _QuickFrontTile
+    extends StatelessWidget {
   const _QuickFrontTile({
     required this.member,
     required this.isFronting,
     required this.onTap,
-    required this.onHoldComplete,
+    required this.onLongPress,
   });
 
   final Member member;
   final bool isFronting;
+
   final VoidCallback onTap;
-  final VoidCallback onHoldComplete;
-
-  @override
-  State<_QuickFrontTile> createState() => _QuickFrontTileState();
-}
-
-class _QuickFrontTileState extends State<_QuickFrontTile>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _holdController;
-  bool _holding = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _holdController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 650),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          HapticFeedback.mediumImpact();
-          widget.onHoldComplete();
-          _holdController.reset();
-
-          if (mounted) {
-            setState(() => _holding = false);
-          }
-        }
-      });
-  }
-
-  @override
-  void dispose() {
-    _holdController.dispose();
-    super.dispose();
-  }
-
-  void _startHold() {
-    HapticFeedback.selectionClick();
-    setState(() => _holding = true);
-    _holdController.forward(from: 0);
-  }
-
-  void _cancelHold() {
-    if (_holdController.status != AnimationStatus.completed) {
-      _holdController.reset();
-    }
-
-    if (mounted) {
-      setState(() => _holding = false);
-    }
-  }
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final ringColor = widget.member.color;
 
-    return Semantics(
-      button: true,
-      label: widget.member.name,
+    return SizedBox(
+      width: 72,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        onLongPressStart: (_) => _startHold(),
-        onLongPressEnd: (_) => _cancelHold(),
-        onLongPressCancel: _cancelHold,
-        child: AnimatedScale(
-          scale: _holding ? 0.94 : 1,
-          duration: const Duration(milliseconds: 100),
-          child: Column(
-            children: [
-              SizedBox(
-                width: 66,
-                height: 66,
-                child: Stack(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Column(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
                   alignment: Alignment.center,
-                  children: [
-                    if (widget.isFronting)
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(19),
-                          border: Border.all(
-                            color: ringColor,
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                    AnimatedBuilder(
-                      animation: _holdController,
-                      builder: (context, _) {
-                        if (_holdController.value == 0 ||
-                            widget.isFronting) {
-                          return const SizedBox.shrink();
-                        }
-
-                        return SizedBox(
-                          width: 64,
-                          height: 64,
-                          child: CustomPaint(
-                            painter: _HoldRingPainter(
-                              progress: _holdController.value,
-                              color: ringColor,
-                            ),
-                          ),
-                        );
-                      },
+                  decoration: BoxDecoration(
+                    color: member.color.withOpacity(
+                      theme.brightness ==
+                              Brightness.dark
+                          ? 0.28
+                          : 0.17,
                     ),
-                    MemberAvatar(
-                      member: widget.member,
-                      size: 56,
+                    borderRadius:
+                        BorderRadius.circular(
+                      16,
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 5),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Text(
-                  widget.member.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: widget.isFronting
-                        ? FontWeight.w700
-                        : FontWeight.w400,
+                  ),
+                  child: Text(
+                    member.initials,
+                    style: TextStyle(
+                      color: member.color,
+                      fontSize: 17,
+                      fontWeight:
+                          FontWeight.w800,
+                    ),
                   ),
                 ),
+
+                if (isFronting)
+                  Positioned(
+                    right: -3,
+                    top: -3,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: member.color,
+                        borderRadius:
+                            BorderRadius.circular(
+                          7,
+                        ),
+                        border: Border.all(
+                          color: theme
+                              .scaffoldBackgroundColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              member.name,
+              maxLines: 1,
+              overflow:
+                  TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(
+                color:
+                    theme.colorScheme.onSurface,
+                fontSize: 12,
+                fontWeight: isFronting
+                    ? FontWeight.w700
+                    : FontWeight.w500,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
-  }
-}
-
-class _HoldRingPainter extends CustomPainter {
-  const _HoldRingPainter({
-    required this.progress,
-    required this.color,
-  });
-
-  final double progress;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-
-    final rect = Rect.fromLTWH(
-      1.5,
-      1.5,
-      size.width - 3,
-      size.height - 3,
-    );
-
-    canvas.drawArc(
-      rect,
-      -1.5708,
-      6.28318 * progress,
-      false,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _HoldRingPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.color != color;
   }
 }

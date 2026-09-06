@@ -16,20 +16,24 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
 
-  static const _pages = [
-    HomePage(),
-    MembersPage(),
-    JournalPage(),
-    SettingsPage(),
-  ];
+  void _openMembers() {
+    setState(() => _index = 1);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      HomePage(onOpenMembers: _openMembers),
+      const MembersPage(),
+      const JournalPage(),
+      const SettingsPage(),
+    ];
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
         index: _index,
-        children: _pages,
+        children: pages,
       ),
       bottomNavigationBar: FloatingBottomNav(
         index: _index,
